@@ -131,9 +131,15 @@ for lyr in hidden_states.keys():
     print('HIDDEN LAYER ',lyr)
     print('BEST REGRESSION R^2 ON HOLD OUT :: ',best_r2)
 
+    mean_coef = best_r2_reg.coef_.mean()
+    std_coef = best_r2_reg.coef_.std()
+
+    print('STATISTICALLY SIGNIFICANT UNITS')
+    print(np.where(np.abs(best_r2_reg.coef_) >= mean_coef + 3*std_coef )[0])
+
 
 for lyr in cell_states.keys():
-    best_r2_reg = None
+    best_r2_cell = None
     best_r2 = 0
 
     all_indices = np.arange(len(cell_states[lyr]))
@@ -144,10 +150,16 @@ for lyr in cell_states.keys():
 
         if r2 > best_r2:
             best_r2 = r2
-            best_r2_reg = reg
+            best_r2_cell = reg
 
     print('CELL LAYER ',lyr)
     print('BEST REGRESSION R^2 ON HOLD OUT :: ',best_r2)
+
+    mean_coef = best_r2_cell.coef_.mean()
+    std_coef = best_r2_cell.coef_.std()
+
+    print('STATISTICALLY SIGNIFICANT UNITS')
+    print(np.where(np.abs(best_r2_cell.coef_) >= mean_coef + 3*std_coef )[0])
 
 
 

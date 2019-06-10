@@ -11,12 +11,12 @@ def parse_line(line, type):
 
 input_path = 'dahaene_dataset/filtered_sentences.txt'
 
-def load_data(input_path):
+def load_data(input_path,type='open_nodes'):
     sentences = []
     labels = []
     with open(input_path) as input_file:
         for line in input_file:
-            sentence, label = parse_line(line,'open_nodes')
+            sentence, label = parse_line(line,type)
             sentences.append(sentence)
             labels.append(label)
     return sentences,labels

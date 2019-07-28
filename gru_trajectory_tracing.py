@@ -17,6 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
 
 plot_intermediate = False
+plot_running_sum = True
 plot_final = False
 plot_first_second = False
 plot_pos_neg = False
@@ -26,7 +27,7 @@ plot_by_first_num = False
 plot_by_second_num = False
 plot_initial_paths = False
 plot_by_MSE = False
-study_clusters = True
+study_clusters = False
 
 dim3 = False
 
@@ -71,6 +72,8 @@ mse = []
 
 intermediate_predictions = []
 
+running_sum = []
+
 all_lines = []
 for idx in range(dataset.testing_size()):
     relevant_order = []
@@ -92,7 +95,17 @@ for idx in range(dataset.testing_size()):
 
     prediction = decoded[len(decoded)-1].item()
 
+    previous_sum = 0
+    for char_idx in range(len(line)):
+        sub_line = line[:char_idx+1]
 
+        try:
+            parsum = eval(sub_line)
+            previous_sum = parsum
+        except:
+            pass
+
+        running_sum.append(previous_sum)
 
     if abs(prediction) > largest_abs_prediction:
         largest_abs_prediction = abs(prediction)
@@ -445,6 +458,38 @@ if plot_final:
     fig = plt.figure()
     plt.scatter(pcar[:,0],pcar[:,1],c=predictions, cmap='seismic',vmin=-largest_abs_prediction, vmax=largest_abs_prediction)
     plt.title('Reset Gate\nColored by Final Prediction\n(Explained Variance : '+str(pcar_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.colorbar()
+    plt.tight_layout()
+
+
+if plot_running_sum:
+    running_sum = np.array(running_sum)
+
+    largest_sum = np.max(np.abs(running_sum))
+
+    fig = plt.figure()
+    plt.scatter(pcah[:,0],pcah[:,1],c=running_sum, cmap='seismic',vmin=-largest_sum, vmax=largest_sum)
+    plt.title('Hidden State\nColored by Running Sum\n(Explained Variance : '+str(pcah_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.colorbar()
+    plt.tight_layout()
+
+
+    fig = plt.figure()
+    plt.scatter(pcau[:,0],pcau[:,1],c=running_sum, cmap='seismic',vmin=-largest_sum, vmax=largest_sum)
+    plt.title('Update Gate\nColored by Running Sum\n(Explained Variance : '+str(pcau_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.colorbar()
+    plt.tight_layout()
+
+
+    fig = plt.figure()
+    plt.scatter(pcar[:,0],pcar[:,1],c=running_sum, cmap='seismic',vmin=-largest_sum, vmax=largest_sum)
+    plt.title('Reset Gate\nColored by Running Sum\n(Explained Variance : '+str(pcar_var)+')')
     plt.xlabel('PC1')
     plt.ylabel('PC2')
     plt.colorbar()

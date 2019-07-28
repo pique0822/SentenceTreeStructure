@@ -25,15 +25,25 @@ parser.add_argument('--num_layers', type=int, default='1',
                     help='Number of epochs.')
 parser.add_argument('--hidden_size', type=int, default='3',
                     help='Number of epochs.')
-
+parser.add_argument('--use_cuda', type=str, default='False',
+                    help='Flag to use cuda or not.')
 
 args = parser.parse_args()
+
+if not torch.cuda.is_available() and args.use_cuda == 'True':
+    print('CUDA UNAVAILABLE')
+    raise ValueError
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 input_size = dataset.vector_size
 PATH = 'arithmetic_fixed_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(args.num_epochs)
 
 
 model = GatedGRU(input_size,args.hidden_size,output_size=1)
+
+model.to(device)
 
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
@@ -51,10 +61,12 @@ for epoch in tqdm(range(args.num_epochs)):
         input, label, line = dataset.training_item(idx)
 
         x = torch.Tensor(input).reshape(1, -1, dataset.vector_size)
+        x.to(device)
+
 
         output, hidden, _ = model(x,hidden)
 
-        loss = criterion(output[len(output)-1], torch.Tensor([label]))
+        loss = criterion(output[len(output)-1], torch.Tensor([label]).to(device))
 
         epoch_loss += loss.item()
         loss.backward()

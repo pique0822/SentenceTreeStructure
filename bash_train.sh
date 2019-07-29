@@ -6,6 +6,8 @@ PROJECT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null 2>&1 && pwd -
 for hidden_value in 100 75 50 25
 do
 	singularity exec -B /om/group/cpl -B "$PROJECT_PATH" "$SINGULARITY_IMG" python3 gru_arithmetic.py \
-		--num_epochs 100 --hidden_size $hidden_value\
+		--num_epochs 500 --hidden_size $hidden_value\
 		|| exit 1
 done
+
+# 14255230

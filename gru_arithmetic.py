@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-dataset_training = 'datasets/arithmetic/fixed_1e4/training.txt'
-dataset_testing = 'datasets/arithmetic/fixed_1e4/testing.txt'
+dataset_training = 'datasets/arithmetic/fixed_1e2/training.txt'
+dataset_testing = 'datasets/arithmetic/fixed_1e2/testing.txt'
 
 dataset = Dataset(dataset_training,dataset_testing)
 
@@ -38,7 +38,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 input_size = dataset.vector_size
-PATH = 'arithmetic_fixed_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(args.num_epochs)
+PATH = 'arithmetic_1e2_fixed_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(args.num_epochs)
 
 
 model = GatedGRU(input_size,args.hidden_size,output_size=1)

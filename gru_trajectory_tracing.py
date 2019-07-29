@@ -17,7 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
 
 plot_intermediate = False
-plot_running_sum = True
+plot_running_sum = False
 plot_final = False
 plot_first_second = False
 plot_pos_neg = False
@@ -28,6 +28,7 @@ plot_by_second_num = False
 plot_initial_paths = False
 plot_by_MSE = False
 study_clusters = False
+plot_fully_injested = True
 
 dim3 = False
 
@@ -74,6 +75,9 @@ intermediate_predictions = []
 
 running_sum = []
 
+fully_injested_one = []
+fully_injested_two = []
+
 all_lines = []
 for idx in range(dataset.testing_size()):
     relevant_order = []
@@ -113,6 +117,18 @@ for idx in range(dataset.testing_size()):
     for i in range(len(update_gates)):
 
         all_lines.append(line[:i])
+
+        if i == addition_index:
+            fully_injested_one.append(int(line[:addition_index]))
+        else:
+            fully_injested_one.append(0)
+
+        if i == equals_index:
+            fully_injested_two.append(int(line[addition_index+1:equals_index]))
+        else:
+            fully_injested_two.append(0)
+
+
 
 
         first_num_value.append(int(line[:addition_index]))
@@ -185,6 +201,24 @@ pcau_var = np.sum(pca_update.explained_variance_ratio_)
 pca_reset = PCA(n_components=min(hidden_size,3))
 pcar = pca_reset.fit_transform(all_rgates)
 pcar_var = np.sum(pca_reset.explained_variance_ratio_)
+
+
+xmax_r = np.max(pcar[:,0])+0.5
+xmax_h = np.max(pcah[:,0])+0.5
+xmax_u = np.max(pcau[:,0])+0.5
+
+xmin_r = np.min(pcar[:,0])-0.5
+xmin_h = np.min(pcah[:,0])-0.5
+xmin_u = np.min(pcau[:,0])-0.5
+
+ymax_r = np.max(pcar[:,1])+0.5
+ymax_h = np.max(pcah[:,1])+0.5
+ymax_u = np.max(pcau[:,1])+0.5
+
+ymin_r = np.min(pcar[:,1])-0.5
+ymin_h = np.min(pcah[:,1])-0.5
+ymin_u = np.min(pcau[:,1])-0.5
+
 #
 if plot_category:
     color_list = []
@@ -247,6 +281,84 @@ if plot_category:
 
 
 
+if plot_fully_injested:
+    fully_injested_one = np.array(fully_injested_one)
+    injested_idcs_one = np.argwhere(fully_injested_one).reshape(-1)
+    first_colors = fully_injested_one[injested_idcs_one]
+
+
+
+    fully_injested_two = np.array(fully_injested_two)
+    injested_idcs_two = np.argwhere(fully_injested_two).reshape(-1)
+    second_colors = fully_injested_two[injested_idcs_two]
+
+    max_value = max(np.max(np.abs(fully_injested_one)), np.max(np.abs(fully_injested_two)))
+
+
+    fig = plt.figure()
+    plt.scatter(pcah[injested_idcs_one,0],pcah[injested_idcs_one,1],c=first_colors, cmap='seismic',vmin=-max_value, vmax=max_value)
+    plt.title('Hidden State\nIngest First Num Colored by Ingestion\n(Explained Variance : '+str(pcah_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.xlim(xmin_h,xmax_h)
+    plt.ylim(ymin_h,ymax_h)
+    plt.colorbar()
+    plt.tight_layout()
+
+    fig = plt.figure()
+    plt.scatter(pcah[injested_idcs_two,0],pcah[injested_idcs_two,1],c=second_colors, cmap='seismic',vmin=-max_value, vmax=max_value)
+    plt.title('Hidden State\nIngest Second Num Colored by Ingestion\n(Explained Variance : '+str(pcah_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.xlim(xmin_h,xmax_h)
+    plt.ylim(ymin_h,ymax_h)
+    plt.colorbar()
+    plt.tight_layout()
+
+
+
+    fig = plt.figure()
+    plt.scatter(pcau[injested_idcs_one,0],pcau[injested_idcs_one,1],c=first_colors, cmap='seismic',vmin=-max_value, vmax=max_value)
+    plt.title('Update Gate\nIngest First Num Colored by Ingestion\n(Explained Variance : '+str(pcau_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.xlim(xmin_u,xmax_u)
+    plt.ylim(ymin_u,ymax_u)
+    plt.colorbar()
+    plt.tight_layout()
+
+    fig = plt.figure()
+    plt.scatter(pcau[injested_idcs_two,0],pcau[injested_idcs_two,1],c=second_colors, cmap='seismic',vmin=-max_value, vmax=max_value)
+    plt.title('Update Gate\nIngest Second Num Colored by Ingestion\n(Explained Variance : '+str(pcau_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.xlim(xmin_u,xmax_u)
+    plt.ylim(ymin_u,ymax_u)
+    plt.colorbar()
+    plt.tight_layout()
+
+
+
+
+    fig = plt.figure()
+    plt.scatter(pcar[injested_idcs_one,0],pcar[injested_idcs_one,1],c=first_colors, cmap='seismic',vmin=-max_value, vmax=max_value)
+    plt.title('Reset Gate\nIngest First Num Colored by Ingestion\n(Explained Variance : '+str(pcar_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.xlim(xmin_r,xmax_r)
+    plt.ylim(ymin_r,ymax_r)
+    plt.colorbar()
+    plt.tight_layout()
+
+    fig = plt.figure()
+    plt.scatter(pcar[injested_idcs_two,0],pcar[injested_idcs_two,1],c=second_colors, cmap='seismic',vmin=-max_value, vmax=max_value)
+    plt.title('Reset Gate\nIngest Second Num Colored by Ingestion\n(Explained Variance : '+str(pcar_var)+')')
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.xlim(xmin_r,xmax_r)
+    plt.ylim(ymin_r,ymax_r)
+    plt.colorbar()
+    plt.tight_layout()
 
 
 

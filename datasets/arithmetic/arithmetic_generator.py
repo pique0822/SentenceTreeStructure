@@ -1,7 +1,7 @@
 import argparse
 import random
 
-# python3 arithmetic_generator.py --num_examples 1000 --max_integer 1000000 --min_integer -1000000 --output_file 1e6/testing.txt
+# python3 arithmetic_generator.py --num_examples 1000 --max_integer 100 --fixed_length True --output_file fixed_1e2/testing.txt
 
 parser = argparse.ArgumentParser(description='Generates a set of lines of arithmetic and the solution.')
 parser.add_argument('--num_examples',type=int, default=100,

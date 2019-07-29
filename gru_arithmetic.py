@@ -79,6 +79,8 @@ for epoch in tqdm(range(args.num_epochs)):
     if (epoch+1) % 25 == 0
         SUB_PATH = 'arithmetic_1e2_fixed_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(epoch)
 
+        torch.save(model.state_dict(), SUB_PATH)
+
 plt.title('MSELoss Over Epochs')
 plt.plot(range(args.num_epochs),all_loss)
 plt.xlabel('Epoch')

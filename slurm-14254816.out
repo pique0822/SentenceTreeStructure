@@ -1,0 +1,4 @@
+  File "gru_arithmetic.py", line 79
+    if (epoch+1) % 25 == 0
+                         ^
+SyntaxError: invalid syntax

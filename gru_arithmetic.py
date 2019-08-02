@@ -78,7 +78,7 @@ for epoch in tqdm(range(args.num_epochs)):
 
     dataset.shuffle_order()
     if (epoch+1) % 25 == 0:
-        SUB_PATH = 'arithmetic_1e2_fixed_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(epoch)
+        SUB_PATH = args.model_prefix+'_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(epoch)
 
         torch.save(model.state_dict(), SUB_PATH)
 

@@ -15,7 +15,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import Axes3D
 
 from sklearn.decomposition import PCA
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 
 def warn(*args, **kwargs):
     pass
@@ -23,16 +23,16 @@ import warnings
 warnings.warn = warn
 
 
-dataset_training = 'datasets/arithmetic/1e2/training.txt'
-dataset_testing = 'datasets/arithmetic/1e2/testing.txt'
+dataset_training = 'datasets/arithmetic/fixed_1e2/training.txt'
+dataset_testing = 'datasets/arithmetic/fixed_1e2/testing.txt'
 
 dataset = Dataset(dataset_training,dataset_testing)
 
 num_layers = 1
 hidden_size = 100
-num_epochs = 5
+num_epochs = 449
 input_size = dataset.vector_size
-PATH = 'models/arithmetic_l_'+str(num_layers)+'_h_'+str(hidden_size)+'_ep_'+str(num_epochs)
+PATH = 'models/arithmetic_1e2_fixed_l_'+str(num_layers)+'_h_'+str(hidden_size)+'_ep_'+str(num_epochs)
 
 model = GatedGRU(dataset.vector_size,hidden_size,output_size=1)
 model.load_state_dict(torch.load(PATH))
@@ -57,8 +57,8 @@ for idx in range(dataset.testing_size()):
 
     input, label, line = dataset.testing_item(idx)
 
-    addition_index = line.index('+')
-    equals_index = line.index('=')
+    addition_index = 4
+    equals_index = 9
 
     first_num = line[:addition_index]
     second_num = line[addition_index+1:equals_index]
@@ -103,57 +103,14 @@ for idx in range(dataset.testing_size()):
 
         partial_num.append(previous_sum)
 
-    negative_first = 0
-    if first_num[0] == '-':
-        negative_first = 1
-        temporal_decoding[0].append(hidden_states[0].detach().numpy().reshape(-1))
-        first_num = first_num[1:]
-        temporal_labels_first_num[0].append(true_first_num)
-        temporal_labels_second_num[0].append(true_second_num)
-        temporal_labels_running_sum[0].append(running_sum[0])
-        temporal_labels_partial_num[0].append(partial_num[0])
+    for char_idx in range(len(line)):
+        temporal_decoding[char_idx].append(hidden_states[char_idx].detach().numpy().reshape(-1))
+        temporal_labels_first_num[char_idx].append(true_first_num)
+        temporal_labels_second_num[char_idx].append(true_second_num)
+        temporal_labels_running_sum[char_idx].append(running_sum[char_idx])
+        temporal_labels_partial_num[char_idx].append(partial_num[char_idx])
 
 
-    num_index = 4 - len(first_num)
-    for i in range(0,len(first_num)):
-        temporal_decoding[num_index + i].append(hidden_states[i + negative_first].detach().numpy().reshape(-1))
-        temporal_labels_first_num[num_index + i].append(true_first_num)
-        temporal_labels_second_num[num_index + i].append(true_second_num)
-        temporal_labels_running_sum[num_index + i].append(running_sum[i + negative_first])
-        temporal_labels_partial_num[num_index + i].append(partial_num[i + negative_first])
-
-    temporal_decoding[4].append(hidden_states[addition_index].detach().numpy().reshape(-1))
-    temporal_labels_first_num[4].append(true_first_num)
-    temporal_labels_second_num[4].append(true_second_num)
-    temporal_labels_running_sum[4].append(running_sum[addition_index])
-    temporal_labels_partial_num[4].append(partial_num[addition_index])
-
-    negative_second = 0
-    if second_num[0] == '-':
-        negative_second = 1
-        temporal_decoding[5].append(hidden_states[addition_index+1].detach().numpy().reshape(-1))
-        second_num = second_num[1:]
-        temporal_labels_first_num[5].append(true_first_num)
-        temporal_labels_second_num[5].append(true_second_num)
-        temporal_labels_running_sum[5].append(running_sum[addition_index+1])
-        temporal_labels_partial_num[5].append(partial_num[addition_index+1])
-
-    num_index = 4 - len(second_num)
-    for i in range(0,len(second_num)):
-        temporal_decoding[5+num_index + i].append(hidden_states[i+addition_index+1 + negative_second].detach().numpy().reshape(-1))
-        temporal_labels_first_num[5+num_index + i].append(true_first_num)
-        temporal_labels_second_num[5+num_index + i].append(true_second_num)
-        temporal_labels_running_sum[5+num_index + i].append(running_sum[i+addition_index+1 + negative_second])
-        temporal_labels_partial_num[5+num_index + i].append(partial_num[i+addition_index+1 + negative_second])
-
-    temporal_decoding[9].append(hidden_states[equals_index].detach().numpy().reshape(-1))
-    temporal_labels_first_num[9].append(true_first_num)
-    temporal_labels_second_num[9].append(true_second_num)
-    temporal_labels_running_sum[9].append(running_sum[equals_index])
-    temporal_labels_partial_num[9].append(partial_num[equals_index])
-
-del temporal_decoding[1]
-del temporal_decoding[6]
 # UnPCA'd Analysis
 # FIRST NUM
 first_num_scores = np.zeros((len(temporal_decoding.keys()),len(temporal_decoding.keys())))
@@ -162,7 +119,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(temporal_decoding[training_key])
     training_labels = np.array(temporal_labels_first_num[training_key])
 
-    reg = LogisticRegression()
+    reg = LinearRegression()
     reg.fit(training_data, training_labels)
 
     for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -176,9 +133,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of First Number Memory')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(first_num_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(first_num_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -189,7 +146,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(temporal_decoding[training_key])
     training_labels = np.array(temporal_labels_second_num[training_key])
 
-    reg = LogisticRegression()
+    reg = LinearRegression()
     reg.fit(training_data, training_labels)
 
     for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -203,9 +160,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of Second Number Memory')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(second_num_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(second_num_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -217,7 +174,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(temporal_decoding[training_key])
     training_labels = np.array(temporal_labels_running_sum[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -234,9 +191,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of Running Sum Memory')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(running_sum_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(running_sum_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -248,7 +205,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(temporal_decoding[training_key])
     training_labels = np.array(temporal_labels_partial_num[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -265,9 +222,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of Partial Number Memory')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(partial_num_score, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(partial_num_score, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -291,7 +248,7 @@ for key in temporal_decoding.keys():
     if len(temporal_decoding[key]) > 0:
         individual_pca_temporal_num_1[key] = pca_num_1.transform(np.array(temporal_decoding[key]))
 
-reg = LogisticRegression()
+reg = LinearRegression()
 reg.fit(individual_pca_temporal_num_1[3],temporal_labels_first_num[3])
 
 print('Number 1 on Number 1')
@@ -309,7 +266,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(individual_pca_temporal_num_1[training_key])
     training_labels = np.array(temporal_labels_first_num[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -326,9 +283,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of First Num PCA to First Num Label')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(pca_one_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(pca_one_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -340,7 +297,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(individual_pca_temporal_num_1[training_key])
     training_labels = np.array(temporal_labels_second_num[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -357,9 +314,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of First Num PCA to Second Num Label')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(pca_one_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(pca_one_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -370,7 +327,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(individual_pca_temporal_num_1[training_key])
     training_labels = np.array(temporal_labels_running_sum[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -387,9 +344,9 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of First Num PCA to Run Sum Label')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(pca_one_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(pca_one_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
@@ -406,7 +363,7 @@ for key in temporal_decoding.keys():
     if len(temporal_decoding[key]) > 0:
         individual_pca_temporal_num_2[key] = pca_num_2.transform(np.array(temporal_decoding[key]))
 
-reg = LogisticRegression()
+reg = LinearRegression()
 reg.fit(individual_pca_temporal_num_2[8],temporal_labels_second_num[8])
 
 print('Number 2 on Number 2')
@@ -423,7 +380,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(individual_pca_temporal_num_2[training_key])
     training_labels = np.array(temporal_labels_second_num[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -440,16 +397,16 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of Second Num PCA')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(pca_two_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(pca_two_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()
 
 
 
 
-reg = LogisticRegression()
+reg = LinearRegression()
 reg.fit(individual_pca_temporal_num_2[8],temporal_labels_running_sum[8])
 print('Running Sum Number 2 on Number 2')
 for key in individual_pca_temporal_num_2.keys():
@@ -480,7 +437,7 @@ for key in range(1,4):
     temp_array = np.vstack((temp_array,np.array(individual_pca_temporal_all[key])))
     temp_labels.extend(temporal_labels_running_sum[key])
 
-reg = LogisticRegression()
+reg = LinearRegression()
 reg.fit(temp_array, temp_labels)
 
 print('Running Sum Number 1 on All')
@@ -494,7 +451,7 @@ for key in range(6,9):
     temp_array = np.vstack((temp_array,np.array(individual_pca_temporal_all[key])))
     temp_labels.extend(temporal_labels_running_sum[key])
 
-reg = LogisticRegression()
+reg = LinearRegression()
 reg.fit(temp_array, temp_labels)
 
 print('Running Sum Number 2 on All')
@@ -509,7 +466,7 @@ for col, training_key in enumerate(temporal_decoding.keys()):
     training_data = np.array(individual_pca_temporal_all[training_key])
     training_labels = np.array(temporal_labels_running_sum[training_key])
     try:
-        reg = LogisticRegression()
+        reg = LinearRegression()
         reg.fit(training_data, training_labels)
 
         for row, testing_key in enumerate(temporal_decoding.keys()):
@@ -526,8 +483,8 @@ for col, training_key in enumerate(temporal_decoding.keys()):
 plt.title('Confusion Matrix of Running Sum PCA')
 plt.xlabel('Trained On')
 plt.ylabel('Testing On')
-plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_T','N1_O','+','N2_S','N2_T','N2_O','='])
-plt.imshow(pca_run_scores, origin='lower', vmin=0, vmax=1)
+plt.xticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.yticks(range(len(temporal_decoding.keys())),['N1_S','N1_H','N1_T','N1_O','+','N2_S','N2_H','N2_T','N2_O','='])
+plt.imshow(pca_run_scores, origin='lower', vmin=0,vmax=1)
 plt.colorbar()
 plt.show()

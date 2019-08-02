@@ -17,12 +17,12 @@ from textwrap import wrap
 
 from tqdm import tqdm
 
-dataset_training = 'datasets/arithmetic/fixed_1e4/training.txt'
-dataset_testing = 'datasets/arithmetic/fixed_1e4/testing.txt'
+dataset_training = 'datasets/arithmetic/fixed_1e2/training.txt'
+dataset_testing = 'datasets/arithmetic/fixed_1e2/testing.txt'
 
 dataset = Dataset(dataset_training,dataset_testing)
 
-hidden_sizes = [75]
+hidden_sizes = [100]
 
 losses = []
 for hidden in tqdm(hidden_sizes):
@@ -30,9 +30,9 @@ for hidden in tqdm(hidden_sizes):
 
     num_layers = 1
     hidden_size = hidden
-    num_epochs = 100
+    num_epochs = 449
     input_size = dataset.vector_size
-    PATH = 'models/arithmetic_fixed_l_'+str(num_layers)+'_h_'+str(hidden_size)+'_ep_'+str(num_epochs)
+    PATH = 'models/arithmetic_1e2_fixed_l_'+str(num_layers)+'_h_'+str(hidden_size)+'_ep_'+str(num_epochs)
 
     model = GatedGRU(dataset.vector_size,hidden_size,output_size=1)
     model.load_state_dict(torch.load(PATH))

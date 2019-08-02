@@ -28,21 +28,25 @@ plot_by_second_num = False
 plot_initial_paths = False
 plot_by_MSE = False
 study_clusters = False
-plot_fully_injested = True
+plot_fully_injested = False
+
+plot_gate_activities = False
+plot_temporal_pca = True
+
 
 dim3 = False
 
 
-dataset_training = 'datasets/arithmetic/1e2/training.txt'
-dataset_testing = 'datasets/arithmetic/1e2/testing.txt'
+dataset_training = 'datasets/arithmetic/fixed_1e2/training.txt'
+dataset_testing = 'datasets/arithmetic/fixed_1e2/testing.txt'
 
 dataset = Dataset(dataset_training,dataset_testing)
 
 num_layers = 1
 hidden_size = 100
-num_epochs = 5
+num_epochs = 449
 input_size = dataset.vector_size
-PATH = 'models/arithmetic_l_'+str(num_layers)+'_h_'+str(hidden_size)+'_ep_'+str(num_epochs)
+PATH = 'models/arithmetic_1e2_fixed_l_'+str(num_layers)+'_h_'+str(hidden_size)+'_ep_'+str(num_epochs)
 
 model = GatedGRU(dataset.vector_size,hidden_size,output_size=1)
 model.load_state_dict(torch.load(PATH))
@@ -65,6 +69,9 @@ first_num = []
 first_num_value = []
 second_num_value = []
 
+line_first_num_value = []
+line_second_num_value = []
+
 largest_abs_prediction = 0
 
 predictions = []
@@ -73,20 +80,30 @@ mse = []
 
 intermediate_predictions = []
 
-running_sum = []
+all_running_sum = []
 
 fully_injested_one = []
 fully_injested_two = []
 
 all_lines = []
+
+temporal_decoding = {0:[],1:[],2:[],3:[],4:[],
+                     5:[],6:[],7:[],8:[],9:[]}
+temporal_updates = {0:[],1:[],2:[],3:[],4:[],
+                     5:[],6:[],7:[],8:[],9:[]}
+temporal_resets = {0:[],1:[],2:[],3:[],4:[],
+                     5:[],6:[],7:[],8:[],9:[]}
+temporal_labels_running_sum = {0:[],1:[],2:[],3:[],4:[],
+                     5:[],6:[],7:[],8:[],9:[]}
 for idx in range(dataset.testing_size()):
+    running_sum = []
     relevant_order = []
     input, label, line = dataset.testing_item(idx)
 
     character.extend(np.argmax(np.array(input),1).tolist())
 
-    addition_index = line.index('+')
-    equals_index = line.index('=')
+    addition_index = 4
+    equals_index = 9
 
     first_num_pos = int(line[:addition_index]) >= 0
     second_num_pos = int(line[addition_index+1:equals_index]) >= 0
@@ -99,17 +116,28 @@ for idx in range(dataset.testing_size()):
 
     prediction = decoded[len(decoded)-1].item()
 
-    previous_sum = 0
+    line_first_num_value.append(int(line[:addition_index]))
+    line_second_num_value.append(int(line[addition_index+1:equals_index]))
+
     for char_idx in range(len(line)):
         sub_line = line[:char_idx+1]
+        num_one = 0
+        num_two = 0
+        if len(sub_line) <= 5:
+            try:
+                num_one = int(line[:min(char_idx+1,4)])
+            except:
+                num_one = 0
+        if len(sub_line) > 5:
+            num_one = int(line[:4])
+            try:
+                num_two = int(line[6:min(char_idx+1,9)])
+            except:
+                num_two = 0
 
-        try:
-            parsum = eval(sub_line)
-            previous_sum = parsum
-        except:
-            pass
+        running_sum.append(num_one + num_two)
+    all_running_sum.extend(running_sum)
 
-        running_sum.append(previous_sum)
 
     if abs(prediction) > largest_abs_prediction:
         largest_abs_prediction = abs(prediction)
@@ -177,6 +205,16 @@ for idx in range(dataset.testing_size()):
 
     ordering.append(relevant_order)
 
+    for char_idx in range(len(hidden_states)):
+        temporal_decoding[char_idx].append(hidden_states[char_idx][0][0].detach().numpy())
+        temporal_updates[char_idx].append(update_gates[char_idx][0][0].detach().numpy())
+        temporal_resets[char_idx].append(reset_gates[char_idx][0][0].detach().numpy())
+        temporal_labels_running_sum[char_idx].append(running_sum[char_idx])
+
+
+
+
+
 
 color_dict = {0:'#9b59b6',1:'#3498db',2:'#f39c12',3:'#e74c3c'}
 locations = []
@@ -218,6 +256,194 @@ ymax_u = np.max(pcau[:,1])+0.5
 ymin_r = np.min(pcar[:,1])-0.5
 ymin_h = np.min(pcah[:,1])-0.5
 ymin_u = np.min(pcau[:,1])-0.5
+
+if plot_gate_activities:
+    mean_hidden = all_hidden.mean(0)
+    std_hidden = all_hidden.std(0)
+
+    mean_reset = all_rgates.mean(0)
+    std_reset = all_rgates.std(0)
+
+    mean_update = all_ugates.mean(0)
+    std_update = all_ugates.std(0)
+
+    hidden_activities = []
+    for time in temporal_decoding.keys():
+        time_array = np.array(temporal_decoding[time])
+        pca_temp = PCA(n_components=min(hidden_size,5))
+        pca_temp.fit(time_array)
+
+        ztime_array = (time_array - mean_hidden)/std_hidden
+
+        mean_activity = ztime_array.mean(0)
+
+        hidden_activities.append(np.abs(pca_temp.transform(mean_activity.reshape(1,-1)).reshape(-1)))
+    fig = plt.figure()
+    plt.imshow(hidden_activities,cmap='Reds')
+    plt.colorbar()
+
+    update_activities = []
+    for time in temporal_decoding.keys():
+        time_array = np.array(temporal_updates[time])
+        pca_temp = PCA(n_components=min(hidden_size,5))
+        pca_temp.fit(time_array)
+
+        ztime_array = (time_array - mean_hidden)/std_hidden
+
+        mean_activity = ztime_array.mean(0)
+
+        update_activities.append(np.abs(pca_temp.transform(mean_activity.reshape(1,-1)).reshape(-1)))
+    fig = plt.figure()
+    plt.imshow(update_activities,cmap='Reds')
+    plt.colorbar()
+
+    reset_activities = []
+    for time in temporal_decoding.keys():
+        time_array = np.array(temporal_resets[time])
+        pca_temp = PCA(n_components=min(hidden_size,5))
+        pca_temp.fit(time_array)
+
+        ztime_array = (time_array - mean_hidden)/std_hidden
+
+        mean_activity = ztime_array.mean(0)
+
+        reset_activities.append(np.abs(pca_temp.transform(mean_activity.reshape(1,-1)).reshape(-1)))
+    fig = plt.figure()
+    plt.imshow(reset_activities,cmap='Reds')
+    plt.colorbar()
+
+
+if plot_temporal_pca:
+    for t in temporal_decoding.keys():
+        temp_hstate = temporal_decoding[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_hstate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=line_first_num_value, cmap='seismic',vmin=-100, vmax=100)
+        plt.title('Hidden State Time '+str(t+1)+'\nColored by First Num \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+
+        temp_rstate = temporal_resets[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_rstate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=line_first_num_value, cmap='seismic',vmin=-100, vmax=100)
+        plt.title('Reset Gate Time '+str(t+1)+'\nColored by First Num \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+        temp_ustate = temporal_updates[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_ustate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=line_first_num_value, cmap='seismic',vmin=-100, vmax=100)
+        plt.title('Update Gate Time '+str(t+1)+'\nColored by First Num \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+
+    plt.close()
+
+    for t in range(5,10):
+        temp_hstate = temporal_decoding[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_hstate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=line_second_num_value, cmap='seismic',vmin=-100, vmax=100)
+        plt.title('Hidden State Time '+str(t+1)+'\nColored by Second Num \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+        
+        plt.savefig('hidden_state_pca_fixed_100_t_'+str(t+1)+'.png')
+        plt.close()
+
+        temp_rstate = temporal_resets[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_rstate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=line_second_num_value, cmap='seismic',vmin=-100, vmax=100)
+        plt.title('Reset Gate Time '+str(t+1)+'\nColored by Second Num \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+        temp_ustate = temporal_updates[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_ustate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=line_second_num_value, cmap='seismic',vmin=-100, vmax=100)
+        plt.title('Update Gate Time '+str(t+1)+'\nColored by Second Num \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+    import pdb; pdb.set_trace()
+    for t in temporal_decoding.keys():
+        temp_hstate = temporal_decoding[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_hstate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=temporal_labels_running_sum[t], cmap='seismic',vmin=-200, vmax=200)
+        plt.title('Hidden State Time '+str(t+1)+'\nColored by Running Sum \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+        temp_rstate = temporal_resets[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_rstate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=temporal_labels_running_sum[t], cmap='seismic',vmin=-200, vmax=100)
+        plt.title('Reset Gate Time '+str(t+1)+'\nColored by Running Sum \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+        temp_ustate = temporal_updates[t]
+        pca_temp = PCA(n_components=min(hidden_size,3))
+        pcat = pca_temp.fit_transform(temp_ustate)
+        pcat_var = np.sum(pca_temp.explained_variance_ratio_)
+
+        fig = plt.figure()
+        plt.scatter(pcat[:,0],pcat[:,1],c=temporal_labels_running_sum[t], cmap='seismic',vmin=-200, vmax=100)
+        plt.title('Update Gate Time '+str(t+1)+'\nColored by Running Sum \n(Explained Variance : '+str(pcat_var)+')')
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.colorbar()
+        plt.tight_layout()
+
+
+
 
 #
 if plot_category:
@@ -577,7 +803,7 @@ if plot_final:
 
 
 if plot_running_sum:
-    running_sum = np.array(running_sum)
+    running_sum = np.array(all_running_sum)
 
     largest_sum = np.max(np.abs(running_sum))
 

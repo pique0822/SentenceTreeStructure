@@ -3,5 +3,5 @@ do
 	python3 gru_arithmetic.py --hidden_size $hidden --num_epochs 100
 done
 
-# sbatch --time 100:0:0 --gres=gpu bash_train.sh
+# sbatch --time 1000 --gres=gpu bash_train.sh
 #14236473

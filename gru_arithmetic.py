@@ -13,11 +13,6 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-dataset_training = 'datasets/arithmetic/fixed_1e2/training.txt'
-dataset_testing = 'datasets/arithmetic/fixed_1e2/testing.txt'
-
-dataset = Dataset(dataset_training,dataset_testing)
-
 parser = argparse.ArgumentParser(description='Training GRU model')
 parser.add_argument('--num_epochs', type=int, default='5',
                     help='Number of epochs.')
@@ -27,8 +22,14 @@ parser.add_argument('--hidden_size', type=int, default='3',
                     help='Number of epochs.')
 parser.add_argument('--use_cuda', type=str, default='False',
                     help='Flag to use cuda or not.')
+parser.add_argument('--training_set', type=str, default='datasets/arithmetic/fixed_1e2/training.txt')
+parser.add_argument('--testing_set', type=str, default='datasets/arithmetic/fixed_1e2/testing.txt')
+parser.add_argument('--model_prefix', type=str, default='arithmetic_1e2_fixed')
 
 args = parser.parse_args()
+
+dataset = Dataset(args.training_set,args.testing_set)
+
 
 if not torch.cuda.is_available() and args.use_cuda == 'True':
     print('CUDA UNAVAILABLE')
@@ -38,7 +39,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 input_size = dataset.vector_size
-PATH = 'arithmetic_1e2_fixed_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(args.num_epochs)
+PATH = args.model_prefix+'_l_'+str(args.num_layers)+'_h_'+str(args.hidden_size)+'_ep_'+str(args.num_epochs)
 
 
 model = GatedGRU(input_size,args.hidden_size,output_size=1)

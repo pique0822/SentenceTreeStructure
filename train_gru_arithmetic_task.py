@@ -2,8 +2,8 @@ import torch.nn as nn
 import torch
 
 from Gated_GRU import GatedGRU
-from datasets.arithmetic.arithmetic_dataset import NormalDataset
-from datasets.reverse_polish_arithmetic.arithmetic_dataset import PolishDataset
+from datasets.arithmetic.arithmetic_dataset import Dataset as NormalDataset
+from datasets.reverse_polish_arithmetic.arithmetic_dataset import Dataset as PolishDataset
 
 import numpy as np
 import random
@@ -87,7 +87,7 @@ for epoch in tqdm(range(args.num_epochs)):
         loss.backward()
         optimizer.step()
 
-    
+
     print('Epoch:',epoch,'Loss:',epoch_loss)
     all_loss.append(epoch_loss)
 

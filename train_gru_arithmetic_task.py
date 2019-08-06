@@ -36,7 +36,7 @@ if args.dataset_type == 'normal':
 elif args.dataset_type == 'polish':
     dataset = PolishDataset(args.training_set,args.testing_set)
 
-
+import pdb; pdb.set_trace()
 
 if not torch.cuda.is_available() and args.use_cuda == 'True':
     print('CUDA UNAVAILABLE')

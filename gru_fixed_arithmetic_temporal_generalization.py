@@ -74,17 +74,23 @@ for idx in range(dataset.testing_size()):
 
     prediction = decoded[len(decoded)-1].item()
 
-    previous_sum = 0
     for char_idx in range(len(line)):
         sub_line = line[:char_idx+1]
+        num_one = 0
+        num_two = 0
+        if len(sub_line) <= 5:
+            try:
+                num_one = int(line[:min(char_idx+1,4)])
+            except:
+                num_one = 0
+        if len(sub_line) > 5:
+            num_one = int(line[:4])
+            try:
+                num_two = int(line[5:min(char_idx+1,9)])
+            except:
+                num_two = 0
 
-        try:
-            parsum = eval(sub_line)
-            previous_sum = parsum
-        except:
-            pass
-
-        running_sum.append(previous_sum)
+        running_sum.append(num_one + num_two)
 
     previous_sum = 0
     for char_idx in range(len(line)):

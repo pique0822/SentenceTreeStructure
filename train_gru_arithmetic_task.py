@@ -36,15 +36,9 @@ if args.dataset_type == 'normal':
 elif args.dataset_type == 'polish':
     dataset = PolishDataset(args.training_set,args.testing_set)
 
-import pdb; pdb.set_trace()
-
-if not torch.cuda.is_available() and args.use_cuda == 'True':
-    print('CUDA UNAVAILABLE')
-    raise ValueError
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
+if torch.cuda.is_available():
+    print('CUDA AVAILABLE')
 
 
 input_size = dataset.vector_size
